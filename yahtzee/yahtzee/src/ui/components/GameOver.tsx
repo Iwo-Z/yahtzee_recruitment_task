@@ -17,9 +17,9 @@ export function GameOver({ state, onRestart }: GameOverProps) {
     <div className="game-over">
       <h2 className="game-over__title">
         {winnerList.length === 1 ? (
-          <>🏆 Wygrywa {winnerList[0].name}!</>
+          <>Wygrywa {winnerList[0].name}!</>
         ) : (
-          <>🏆 Remis: {winnerList.map((w) => w.name).join(', ')}</>
+          <>Remis: {winnerList.map((w) => w.name).join(', ')}</>
         )}
       </h2>
       <ol className="game-over__rank">
@@ -28,7 +28,7 @@ export function GameOver({ state, onRestart }: GameOverProps) {
             <span className="game-over__pos">{idx + 1}.</span>
             <span className="game-over__name">
               {p.name}
-              {p.isAI && ' 🤖'}
+              {p.isAI && ' (AI)'}
             </span>
             <span className="game-over__score">{score} pkt</span>
           </li>

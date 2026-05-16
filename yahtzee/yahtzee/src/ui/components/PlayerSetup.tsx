@@ -2,19 +2,13 @@ import { useState } from 'react';
 import type { PlayerConfig } from '../../engine/types';
 
 interface PlayerSetupProps {
-  hasSaved: boolean;
   onStart: (configs: PlayerConfig[]) => void;
-  onResume: () => void;
 }
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 4;
 
-/**
- * Ekran wyboru liczby graczy i ich imion. Każdy gracz może być AI.
- * Walidacja po stronie UI dubluje engine — feedback "live" przy edycji.
- */
-export function PlayerSetup({ hasSaved, onStart, onResume }: PlayerSetupProps) {
+export function PlayerSetup({ onStart }: PlayerSetupProps) {
   const [configs, setConfigs] = useState<PlayerConfig[]>([
     { name: 'Gracz 1', isAI: false },
     { name: 'Gracz 2', isAI: true },
@@ -52,15 +46,6 @@ export function PlayerSetup({ hasSaved, onStart, onResume }: PlayerSetupProps) {
         Klasyczna gra w kości dla 2–4 graczy. Wybierz konfigurację i zaczynamy.
       </p>
 
-      {hasSaved && (
-        <div className="setup__resume">
-          <p>Znaleziono zapisaną grę.</p>
-          <button type="button" className="btn btn--secondary" onClick={onResume}>
-            Wznów poprzednią grę
-          </button>
-        </div>
-      )}
-
       <div className="setup__count">
         <label htmlFor="player-count">Liczba graczy:</label>
         <div className="setup__count-buttons" role="radiogroup" aria-labelledby="player-count">
@@ -95,7 +80,7 @@ export function PlayerSetup({ hasSaved, onStart, onResume }: PlayerSetupProps) {
                 checked={cfg.isAI}
                 onChange={(e) => updateConfig(i, { isAI: e.target.checked })}
               />
-              <span>Komputer 🤖</span>
+              <span>Komputer (AI)</span>
             </label>
           </div>
         ))}

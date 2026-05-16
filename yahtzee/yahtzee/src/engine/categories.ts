@@ -1,13 +1,3 @@
-/**
- * Kategorie punktacji — single source of truth.
- *
- * Stałe `*_CATEGORIES` to `as const` tuple, dzięki czemu można z nich wyprowadzić
- * typy literalne (`UpperCategory`, `LowerCategory`, `Category`) bez ręcznego
- * duplikowania nazw. Iteracja po tablicy zawsze obejmuje wszystkie kategorie —
- * jeśli dodamy nową, kompilator wskaże miejsca do uzupełnienia.
- */
-
-/** Górna sekcja tabelki (jedynki..szóstki). */
 export const UPPER_CATEGORIES = [
   'ones',
   'twos',
@@ -17,7 +7,6 @@ export const UPPER_CATEGORIES = [
   'sixes',
 ] as const;
 
-/** Dolna sekcja tabelki (kombinacje). */
 export const LOWER_CATEGORIES = [
   'threeOfAKind',
   'fourOfAKind',
@@ -34,7 +23,6 @@ export type UpperCategory = (typeof UPPER_CATEGORIES)[number];
 export type LowerCategory = (typeof LOWER_CATEGORIES)[number];
 export type Category = UpperCategory | LowerCategory;
 
-/** Polskie nazwy wyświetlane w UI — w jednym miejscu. */
 export const CATEGORY_LABELS: Record<Category, string> = {
   ones: 'Jedynki',
   twos: 'Dwójki',
@@ -51,7 +39,6 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   chance: 'Szansa',
 };
 
-/** Krótki opis pomocniczy do tooltipów. */
 export const CATEGORY_DESCRIPTIONS: Record<Category, string> = {
   ones: 'Suma wyrzuconych jedynek',
   twos: 'Suma wyrzuconych dwójek',
@@ -68,32 +55,10 @@ export const CATEGORY_DESCRIPTIONS: Record<Category, string> = {
   chance: 'Suma wszystkich kości (bez warunku)',
 };
 
-/**
- * Próg punktów w górnej sekcji aktywujący premię.
- *
- * UWAGA — rozbieżność w specyfikacji:
- *   PDF zadania:    "co najmniej 63 punkty"
- *   Wiadomość mail: "co najmniej 62 punkty"
- *
- * Wybieram 63 zgodnie z dokumentem PDF, który jest źródłem prawdy w tabelkach
- * (klasyczny próg w Yahtzee wynosi 63 = 3·1 + 3·2 + ... + 3·6, więc liczba ma sens
- * matematyczny — to średnio trzy "swoje" kości w każdym wierszu górnej sekcji).
- * Jeśli okaże się, że poprawny próg to 62, wystarczy zmienić tę stałą.
- */
+// Próg premii zgodnie z PDF-em (63, nie 62).
 export const UPPER_BONUS_THRESHOLD = 63;
 export const UPPER_BONUS_VALUE = 35;
 
 export function isUpperCategory(c: Category): c is UpperCategory {
-  return (
-    c === 'ones' ||
-    c === 'twos' ||
-    c === 'threes' ||
-    c === 'fours' ||
-    c === 'fives' ||
-    c === 'sixes'
-  );
-}
-
-export function isLowerCategory(c: Category): c is LowerCategory {
-  return !isUpperCategory(c);
+  return (UPPER_CATEGORIES as readonly string[]).includes(c);
 }

@@ -1,9 +1,7 @@
-import { beforeEach, describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { aiDecideHolds, aiPickCategory, aiShouldScoreNow } from '../engine/ai';
-import { _resetIdCounterForTests, createGame, rollAction, scoreAction } from '../engine/game';
+import { createGame, rollAction, scoreAction } from '../engine/game';
 import type { Dice } from '../engine/types';
-
-beforeEach(() => _resetIdCounterForTests());
 
 const PLAYERS = [
   { name: 'AI-1', isAI: true },

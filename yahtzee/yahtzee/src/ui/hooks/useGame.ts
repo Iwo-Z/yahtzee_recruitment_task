@@ -7,19 +7,8 @@ import {
   rollAction,
   scoreAction,
   toggleHoldAction,
-  winners,
 } from '../../engine/game';
 import { aiDecideHolds, aiPickCategory, aiShouldScoreNow } from '../../engine/ai';
-import { clearState, loadState, saveState } from '../../engine/storage';
-
-/**
- * Hook spinający czysty engine z React-owym stanem.
- *
- * - Wszystkie mutacje przechodzą przez czyste reducery (`rollAction`, `scoreAction`, ...).
- * - Stan synchronizowany do localStorage przez efekt — by wznowienie gry działało.
- * - Tury AI uruchamiane są w efekcie zależnym od `state.phase`/`currentPlayerIndex`/`rollsLeft`,
- *   z opóźnieniem dla efektu wizualnego (gracz widzi co się dzieje, a nie błyskawiczny skok).
- */
 
 const AI_STEP_DELAY_MS = 900;
 
@@ -32,38 +21,22 @@ export interface UseGameApi {
   view: GameView;
   isAITurnActive: boolean;
   startGame: (configs: PlayerConfig[]) => void;
-  resumeGame: () => boolean;
-  hasSaved: boolean;
   roll: () => void;
   toggleHold: (index: number) => void;
   score: (category: Category) => void;
   restart: () => void;
-  rollingTick: number; // monotonicznie rosnący licznik dla animacji rzutu
+  rollingTick: number;
 }
 
 export function useGame(): UseGameApi {
   const [state, setState] = useState<GameState | null>(null);
   const [rollingTick, setRollingTick] = useState(0);
   const [isAITurnActive, setIsAITurnActive] = useState(false);
-  const [hasSaved, setHasSaved] = useState<boolean>(() => loadState() !== null);
 
-  // Trzymamy świeży stan w refie — pomocne w pętli AI, by uniknąć stale-closure
-  // przy łańcuchu setTimeoutów.
+  // stateRef żyje obok state, bo pętla setTimeout AI czyta go po zamknięciu
   const stateRef = useRef<GameState | null>(state);
   useEffect(() => {
     stateRef.current = state;
-  }, [state]);
-
-  // Zapis do localStorage przy każdej zmianie stanu (i czyszczenie po zakończeniu).
-  useEffect(() => {
-    if (!state) return;
-    if (state.phase === 'finished') {
-      clearState();
-      setHasSaved(false);
-    } else {
-      saveState(state);
-      setHasSaved(true);
-    }
   }, [state]);
 
   const startGame = useCallback((configs: PlayerConfig[]) => {
@@ -71,18 +44,7 @@ export function useGame(): UseGameApi {
     setState(fresh);
   }, []);
 
-  const resumeGame = useCallback((): boolean => {
-    const loaded = loadState();
-    if (loaded) {
-      setState(loaded);
-      return true;
-    }
-    return false;
-  }, []);
-
   const restart = useCallback(() => {
-    clearState();
-    setHasSaved(false);
     setState(null);
   }, []);
 
@@ -97,7 +59,6 @@ export function useGame(): UseGameApi {
   const toggleHold = useCallback((index: number) => {
     setState((prev) => {
       if (!prev) return prev;
-      // Pierwszy rzut i po ostatnim rzucie — hold nieaktywny.
       if (prev.rollsLeft === 3 || prev.rollsLeft === 0) return prev;
       return toggleHoldAction(prev, index);
     });
@@ -110,7 +71,6 @@ export function useGame(): UseGameApi {
     });
   }, []);
 
-  // Pętla AI: jeśli aktualny gracz jest AI, sterujemy turą krok po kroku.
   useEffect(() => {
     if (!state || state.phase !== 'playing') {
       setIsAITurnActive(false);
@@ -133,7 +93,6 @@ export function useGame(): UseGameApi {
       const player = s.players[s.currentPlayerIndex];
       if (!player.isAI) return;
 
-      // Decyzja: zapisać teraz, czy rzucać?
       if (s.rollsLeft < 3 && aiShouldScoreNow(s)) {
         const cat = aiPickCategory(s);
         const t = window.setTimeout(() => {
@@ -144,7 +103,6 @@ export function useGame(): UseGameApi {
         return;
       }
 
-      // Przed rzutem ustawiamy holdy (oprócz pierwszego rzutu — tam i tak są ignorowane).
       if (s.rollsLeft < 3) {
         const wantHolds = aiDecideHolds(s);
         const t1 = window.setTimeout(() => {
@@ -170,7 +128,6 @@ export function useGame(): UseGameApi {
         }, AI_STEP_DELAY_MS / 2);
         timers.push(t1);
       } else {
-        // Pierwszy rzut — od razu rzucamy.
         const t = window.setTimeout(() => {
           if (cancelled) return;
           setState((prev) => (prev && canRoll(prev) ? rollAction(prev) : prev));
@@ -188,7 +145,7 @@ export function useGame(): UseGameApi {
       cancelled = true;
       for (const t of timers) window.clearTimeout(t);
     };
-    // Reagujemy tylko na zmiany "skoku" w turze AI, nie na cały obiekt state.
+    // deps celowo ograniczone do pól zmieniających turę AI
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.phase, state?.currentPlayerIndex, state?.rollsLeft, state?.players]);
 
@@ -202,8 +159,6 @@ export function useGame(): UseGameApi {
     view,
     isAITurnActive,
     startGame,
-    resumeGame,
-    hasSaved,
     roll,
     toggleHold,
     score,
@@ -211,5 +166,3 @@ export function useGame(): UseGameApi {
     rollingTick,
   };
 }
-
-export { winners };

@@ -1,10 +1,5 @@
 import type { DieValue } from '../../engine/types';
 
-/**
- * Pojedyncza kość rysowana SVG. Pozycje oczek dla wartości 1–6 — klasyczny układ.
- * Rendering wektorowy: skaluje się bez utraty jakości, nie wymaga grafiki rastrowej.
- */
-
 interface DieProps {
   value: DieValue;
   held: boolean;

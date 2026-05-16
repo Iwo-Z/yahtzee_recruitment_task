@@ -17,21 +17,8 @@ import type {
   RandomFn,
 } from './types';
 
-/**
- * Architektura: czyste reducery `state -> state`. Brak klas, brak mutacji.
- * UI wywołuje je przez `setState(fn)` w hooku `useGame`, dzięki czemu
- * silnik można testować jednostkowo bez Reacta.
- */
-
-let _idCounter = 0;
-function nextId(): string {
-  // Identyfikatory monotoniczne — proste, deterministyczne (wygodne w testach).
-  return `e${++_idCounter}`;
-}
-
-/** Wyłącznie do testów — reset stanu modułu. */
-export function _resetIdCounterForTests(): void {
-  _idCounter = 0;
+function makeId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function currentPlayer(state: GameState): Player {
@@ -45,7 +32,7 @@ function appendLog(
   message: string,
 ): readonly LogEntry[] {
   const entry: LogEntry = {
-    id: nextId(),
+    id: makeId(),
     timestamp: Date.now(),
     playerId: player.id,
     playerName: player.name,
@@ -67,7 +54,7 @@ export function createGame(configs: readonly PlayerConfig[]): GameState {
   }));
 
   const initialLog: LogEntry = {
-    id: nextId(),
+    id: makeId(),
     timestamp: Date.now(),
     playerId: players[0].id,
     playerName: players[0].name,
@@ -86,13 +73,6 @@ export function createGame(configs: readonly PlayerConfig[]): GameState {
   };
 }
 
-/**
- * Wykonuje rzut. Walidacja:
- *  - gra musi być w fazie 'playing'
- *  - muszą zostać dostępne rzuty
- * Pierwszy rzut tury (rollsLeft === 3) ignoruje flagi `held` i rzuca wszystkimi
- * kośćmi zgodnie ze specyfikacją.
- */
 export function rollAction(state: GameState, random: RandomFn = Math.random): GameState {
   if (state.phase !== 'playing') {
     throw new Error('Gra nie jest w fazie rozgrywki');
@@ -120,10 +100,6 @@ export function rollAction(state: GameState, random: RandomFn = Math.random): Ga
   };
 }
 
-/**
- * Przełącza flagę "zatrzymaj" dla jednej kości. Możliwe tylko między rzutami,
- * tj. gdy mamy rzucone kości (rollsLeft < 3), ale jeszcze możemy rzucać (rollsLeft > 0).
- */
 export function toggleHoldAction(state: GameState, index: number): GameState {
   if (state.phase !== 'playing') return state;
   if (state.rollsLeft === 3) return state; // jeszcze nie rzucono — nie ma czego trzymać
@@ -135,13 +111,6 @@ export function toggleHoldAction(state: GameState, index: number): GameState {
   return { ...state, held: newHeld };
 }
 
-/**
- * Wpisuje punkty do wybranej kategorii bieżącego gracza i przekazuje turę dalej.
- * Walidacja:
- *  - gra w fazie 'playing'
- *  - kategoria jeszcze niewykorzystana
- *  - gracz musi mieć co najmniej jeden rzut wykonany (rollsLeft < 3)
- */
 export function scoreAction(state: GameState, category: Category): GameState {
   if (state.phase !== 'playing') {
     throw new Error('Gra nie jest w fazie rozgrywki');
@@ -173,7 +142,6 @@ export function scoreAction(state: GameState, category: Category): GameState {
     `Wpisano ${points} pkt → "${CATEGORY_LABELS[category]}"`,
   );
 
-  // Po zapisie: albo kończymy grę, albo zaczynamy turę kolejnego gracza.
   let finalLog = logAfterScore;
   if (allComplete) {
     const wins = winners(newPlayers);
@@ -181,11 +149,11 @@ export function scoreAction(state: GameState, category: Category): GameState {
     finalLog = [
       ...logAfterScore,
       {
-        id: nextId(),
+        id: makeId(),
         timestamp: Date.now(),
         playerId: updatedPlayer.id,
         playerName: updatedPlayer.name,
-        type: 'game-end',
+        type: 'game-end' as const,
         message:
           wins.length === 1
             ? `Koniec gry. Zwycięża: ${winnerNames}`
@@ -197,11 +165,11 @@ export function scoreAction(state: GameState, category: Category): GameState {
     finalLog = [
       ...logAfterScore,
       {
-        id: nextId(),
+        id: makeId(),
         timestamp: Date.now(),
         playerId: nextPlayer.id,
         playerName: nextPlayer.name,
-        type: 'turn-start',
+        type: 'turn-start' as const,
         message: `Tura: ${nextPlayer.name}`,
       },
     ];
@@ -219,7 +187,6 @@ export function scoreAction(state: GameState, category: Category): GameState {
   };
 }
 
-/** Zwycięzca(y) — może być więcej niż jeden w razie remisu. */
 export function winners(players: readonly Player[]): Player[] {
   if (players.length === 0) return [];
   const totals = players.map((p) => totalScore(p.scorecard));
@@ -227,12 +194,10 @@ export function winners(players: readonly Player[]): Player[] {
   return players.filter((_, i) => totals[i] === max);
 }
 
-/** Pomocnicze: czy gracz aktualnie ruszający może wykonać rzut. */
 export function canRoll(state: GameState): boolean {
   return state.phase === 'playing' && state.rollsLeft > 0;
 }
 
-/** Pomocnicze: czy gracz może już wpisać punkty (wykonał ≥1 rzut). */
 export function canScore(state: GameState): boolean {
   return state.phase === 'playing' && state.rollsLeft < 3;
 }

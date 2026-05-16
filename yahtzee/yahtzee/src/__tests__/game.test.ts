@@ -1,6 +1,5 @@
-import { beforeEach, describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import {
-  _resetIdCounterForTests,
   canRoll,
   canScore,
   createGame,
@@ -12,8 +11,6 @@ import {
 import { totalScore } from '../engine/scoring';
 import { ALL_CATEGORIES } from '../engine/categories';
 import type { Category } from '../engine/types';
-
-beforeEach(() => _resetIdCounterForTests());
 
 const TWO_PLAYERS = [
   { name: 'Anna', isAI: false },

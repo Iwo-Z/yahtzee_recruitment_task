@@ -1,21 +1,6 @@
-import { ALL_CATEGORIES, UPPER_CATEGORIES } from './categories';
+import { UPPER_CATEGORIES } from './categories';
 import { scoreCategory, availableCategories } from './scoring';
 import type { Category, Dice, DieValue, GameState, Held, Player } from './types';
-
-/**
- * Strategia AI — celowo nieskomplikowana, ale niegłupia:
- *
- *   1. Po rzucie liczymy "potencjał" każdej dostępnej kategorii (najlepszy wynik
- *      jaki realistycznie można uzyskać, gdyby zatrzymać sensowny podzbiór kości).
- *   2. Zatrzymujemy kości, które wnoszą wkład do kategorii z najwyższym potencjałem.
- *   3. Jeśli mamy "pewniaka" (np. wyrzuconego Króla, gdy kategoria jest otwarta) —
- *      nie marnujemy rzutów, od razu zapisujemy.
- *   4. Po trzecim rzucie wybieramy kategorię z najwyższym aktualnym wynikiem; gdy
- *      wszystkie dają 0 — poświęcamy najtańszą (Jedynki/Dwójki, ewentualnie Króla).
- *
- * Nie staramy się zaprogramować mistrza świata — celem jest, by AI grało rozsądnie
- * i było weryfikowalne testem (sanity).
- */
 
 function counts(dice: Dice): Map<DieValue, number> {
   const m = new Map<DieValue, number>();
@@ -36,7 +21,6 @@ function modeValue(dice: Dice): DieValue | null {
   return best;
 }
 
-/** Czy obecny rzut już daje yahtzee / duży strit — wtedy nie warto rzucać dalej. */
 function isPerfectScoreAvailable(dice: Dice, player: Player): boolean {
   if (player.scorecard.yahtzee === null && scoreCategory('yahtzee', dice) === 50) return true;
   if (player.scorecard.largeStraight === null && scoreCategory('largeStraight', dice) === 40) {
@@ -45,16 +29,11 @@ function isPerfectScoreAvailable(dice: Dice, player: Player): boolean {
   return false;
 }
 
-/**
- * Heurystyczna wycena "ile pewnie da się tu jeszcze ugrać" — używana do priorytetyzacji
- * kategorii przy decyzji co trzymać. Im wyższy zwrot, tym bardziej kategoria jest "warta"
- * zachowania na nią rzutów.
- */
 function categoryPotential(category: Category, dice: Dice): number {
   const c = counts(dice);
   switch (category) {
     case 'ones':
-      return (c.get(1) ?? 0) * 1 + 3; // bonus za to, że można jeszcze dorzucić
+      return (c.get(1) ?? 0) * 1 + 3;
     case 'twos':
       return (c.get(2) ?? 0) * 2 + 4;
     case 'threes':
@@ -67,7 +46,6 @@ function categoryPotential(category: Category, dice: Dice): number {
       return (c.get(6) ?? 0) * 6 + 12;
     case 'threeOfAKind': {
       const max = Math.max(0, ...c.values());
-      // im więcej "rdzenia" tym lepszy potencjał
       return max >= 3 ? scoreCategory('threeOfAKind', dice) : max * 6;
     }
     case 'fourOfAKind': {
@@ -110,16 +88,13 @@ function longestRun(dice: Dice): number {
   return longest;
 }
 
-/** Zatrzymywane kości jako pozycyjna maska zgodna z `state.held`. */
 export function aiDecideHolds(state: GameState): Held {
   const player = state.players[state.currentPlayerIndex];
   const dice = state.dice;
   const available = availableCategories(player.scorecard);
 
-  // Po ostatnim rzucie nie ma czego zatrzymywać.
   if (state.rollsLeft === 0) return state.held;
 
-  // Wybór kategorii docelowej: najwyższy potencjał spośród dostępnych.
   let target: Category = available[0];
   let bestPotential = -Infinity;
   for (const cat of available) {
@@ -130,7 +105,6 @@ export function aiDecideHolds(state: GameState): Held {
     }
   }
 
-  // Decyzja "co trzymać" w zależności od kategorii docelowej.
   switch (target) {
     case 'ones':
     case 'twos':
@@ -138,20 +112,17 @@ export function aiDecideHolds(state: GameState): Held {
     case 'fours':
     case 'fives':
     case 'sixes': {
-      // Trzymamy wszystkie kości z wartością odpowiadającą kategorii.
       const value = UPPER_CATEGORIES.indexOf(target) + 1;
       return dice.map((d) => d === value);
     }
     case 'threeOfAKind':
     case 'fourOfAKind':
     case 'yahtzee': {
-      // Trzymamy największą grupę identycznych wartości.
       const mode = modeValue(dice);
       if (mode === null) return state.held;
       return dice.map((d) => d === mode);
     }
     case 'fullHouse': {
-      // Trzymamy dwie największe grupy.
       const c = counts(dice);
       const sorted = [...c.entries()].sort((a, b) => b[1] - a[1]);
       const keepValues = new Set(sorted.slice(0, 2).map(([v]) => v));
@@ -159,9 +130,7 @@ export function aiDecideHolds(state: GameState): Held {
     }
     case 'smallStraight':
     case 'largeStraight': {
-      // Trzymamy jedyne wystąpienia kości tworzących najdłuższy ciąg.
       const uniq = [...new Set(dice)].sort((a, b) => a - b);
-      // Znajdujemy maksymalny ciąg w uniq.
       let bestStart = uniq[0];
       let bestLen = 1;
       let curStart = uniq[0];
@@ -190,18 +159,15 @@ export function aiDecideHolds(state: GameState): Held {
       });
     }
     case 'chance': {
-      // Trzymamy 4-ki, 5-ki, 6-ki — dolne wartości warto przerzucić.
       return dice.map((d) => d >= 4);
     }
   }
 }
 
-/** Wybór kategorii do wpisania na końcu tury AI. */
 export function aiPickCategory(state: GameState): Category {
   const player = state.players[state.currentPlayerIndex];
   const available = availableCategories(player.scorecard);
 
-  // Najpierw: szukamy najwyższego natychmiastowego wyniku.
   let best: Category = available[0];
   let bestScore = -1;
   for (const cat of available) {
@@ -212,24 +178,21 @@ export function aiPickCategory(state: GameState): Category {
     }
   }
 
-  // Jeśli wszystko dałoby 0 — poświęcamy kategorię o najmniejszej "wartości oczekiwanej",
-  // którą przybliżamy maksymalnym możliwym wynikiem w danym wierszu.
-  // Sortowanie rosnące: Jedynki (max 5) najpierw, Król (max 50) na końcu.
   if (bestScore === 0) {
     const sacrificeOrder: Category[] = [
-      'ones', //  max 5
-      'twos', //  max 10
-      'threes', // max 15
-      'fours', //  max 20
-      'fives', //  max 25
-      'fullHouse', // 25 (lub 0)
-      'sixes', // max 30
-      'threeOfAKind', // max 30
-      'fourOfAKind', // max 30
-      'smallStraight', // 30 (lub 0)
-      'chance', // max 30
-      'largeStraight', // 40 (lub 0)
-      'yahtzee', // 50 (lub 0) — najcenniejsza, poświęcamy w ostateczności
+      'ones',         //  max 5
+      'twos',         //  max 10
+      'threes',       //  max 15
+      'fours',        //  max 20
+      'fives',        //  max 25
+      'fullHouse',    //  25 (lub 0)
+      'sixes',        //  max 30
+      'threeOfAKind', //  max 30
+      'fourOfAKind',  //  max 30
+      'smallStraight',//  30 (lub 0)
+      'chance',       //  max 30
+      'largeStraight',//  40 (lub 0)
+      'yahtzee',      //  50 (lub 0) — poświęcamy w ostateczności
     ];
     for (const cat of sacrificeOrder) {
       if (available.includes(cat)) return cat;
@@ -239,15 +202,8 @@ export function aiPickCategory(state: GameState): Category {
   return best;
 }
 
-/**
- * Decyduje, czy AI chce rzucać dalej, czy od razu zapisać wynik.
- * Zwraca `true` = zapisz teraz; `false` = jeszcze rzuć.
- */
 export function aiShouldScoreNow(state: GameState): boolean {
   const player = state.players[state.currentPlayerIndex];
   if (state.rollsLeft === 0) return true;
   return isPerfectScoreAvailable(state.dice, player);
 }
-
-// Re-export ALL_CATEGORIES po stronie tego modułu, aby nie sięgać do `categories` z UI.
-export { ALL_CATEGORIES };

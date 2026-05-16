@@ -1,5 +1,4 @@
 import {
-  ALL_CATEGORIES,
   CATEGORY_DESCRIPTIONS,
   CATEGORY_LABELS,
   LOWER_CATEGORIES,
@@ -23,11 +22,6 @@ interface ScorecardProps {
   isAITurnActive: boolean;
 }
 
-/**
- * Pełna tabela wyników — gracze jako kolumny, kategorie jako wiersze.
- * W aktywnej kolumnie wyświetlamy *podgląd* punktów dla niewypełnionych kategorii,
- * by gracz wiedział ile zdobędzie zanim kliknie.
- */
 export function Scorecard({ state, onPickCategory, isAITurnActive }: ScorecardProps) {
   const currentIndex = state.currentPlayerIndex;
   const allowPick = canScore(state) && !isAITurnActive;
@@ -74,7 +68,7 @@ export function Scorecard({ state, onPickCategory, isAITurnActive }: ScorecardPr
                 }`}
               >
                 {p.name}
-                {p.isAI && <span className="sc__aitag" title="Sterowany przez komputer"> 🤖</span>}
+                {p.isAI && <span className="sc__aitag" title="Sterowany przez komputer"> (AI)</span>}
               </th>
             ))}
           </tr>
@@ -146,8 +140,6 @@ export function Scorecard({ state, onPickCategory, isAITurnActive }: ScorecardPr
           </tr>
         </tbody>
       </table>
-      {/* zapobiegamy ostrzeżeniu o unused import — kategorię używamy w pętli wyżej */}
-      <span hidden>{ALL_CATEGORIES.length}</span>
-    </div>
+</div>
   );
 }

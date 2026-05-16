@@ -4,7 +4,6 @@ import { DiceTray } from './ui/components/DiceTray';
 import { Scorecard } from './ui/components/Scorecard';
 import { GameOver } from './ui/components/GameOver';
 import { GameLog } from './ui/components/GameLog';
-import { ThemeToggle } from './ui/components/ThemeToggle';
 import type { Category, GameState } from './engine/types';
 
 export function App() {
@@ -13,17 +12,12 @@ export function App() {
   return (
     <div className="app">
       <header className="app__header">
-        <h1 className="app__title">🎲 Kości</h1>
-        <ThemeToggle />
+        <h1 className="app__title">Kości</h1>
       </header>
 
       <main className="app__main">
         {game.view.kind === 'setup' && (
-          <PlayerSetup
-            hasSaved={game.hasSaved}
-            onStart={game.startGame}
-            onResume={game.resumeGame}
-          />
+          <PlayerSetup onStart={game.startGame} />
         )}
 
         {game.view.kind === 'playing' && (
@@ -79,10 +73,10 @@ function PlayingView({
       <div className="play__topbar">
         <h2 className="play__current">
           Tura: <strong>{current.name}</strong>
-          {current.isAI && <span className="play__aitag"> 🤖</span>}
+          {current.isAI && <span className="play__aitag"> (AI)</span>}
         </h2>
         <button type="button" className="btn btn--ghost" onClick={onRestart}>
-          ⟲ Nowa gra
+          Nowa gra
         </button>
       </div>
 

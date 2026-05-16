@@ -9,10 +9,6 @@ interface DiceTrayProps {
   isAITurnActive: boolean;
 }
 
-/**
- * Pas pięciu kości + przycisk "Rzuć". `rollingTick` zwiększa się przy każdym rzucie
- * i służy jako klucz CSS-animacji — restart animacji bez ręcznego mountowania.
- */
 export function DiceTray({
   state,
   rollingTick,
